@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timer Page</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .timer {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .timer-time {
+            font-size: 48px;
+            font-weight: bold;
+        }
+        .timer-details {
+            font-size: 16px;
+            color: #333;
+        }
+        .timer-status {
+            background-color: #009688;
+            color: white;
+            padding: 5px;
+            margin-top: 5px;
+            display: inline-block;
+        }
+        .add-timer {
+            color: #1a0dab;
+            text-decoration: none;
+            font-size: 16px;
+        }
+        .add-timer:hover {
+            text-decoration: underline;
+        }
+        .total-time {
+            font-size: 16px;
+            color: #333;
+            text-align: right;
+        }
+        .controls {
+            margin-top: 20px;
+        }
+        .controls select {
+            padding: 5px;
+            font-size: 16px;
+        }
+        .buttons {
+            margin-top: 20px;
+        }
+        .buttons button {
+            font-size: 16px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .start-button {
+            background-color: #009688;
+            color: white;
+        }
+        .reset-button {
+            background-color: white;
+            color: #333;
+            border: 1px solid #ccc;
+        }
+        .fullscreen {
+            text-align: right;
+            margin-bottom: 20px;
+        }
+        .fullscreen a {
+            color: #1a0dab;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .fullscreen a:hover {
+            text-decoration: underline;
+        }
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 1; 
+            left: 0;
+            top: 0;
+            width: 100%; 
+            height: 100%; 
+            overflow: auto; 
+            background-color: rgb(0,0,0); 
+            background-color: rgba(0,0,0,0.4); 
+            padding-top: 60px; 
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto; 
+            padding: 20px;
+            border: 1px solid #888;
+            width: 300px; 
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .timer-controls {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="fullscreen">
+        <a href="#">Exit Fullscreen</a>
+    </div>
+    
+    <div id="timersContainer">
+        <!-- Dynamic Timers will be added here -->
+    </div>
+    
+    <div>
+        <a href="#" class="add-timer" id="addTimerButton">+ Add another timer</a>
+    </div>
+    
+    <div class="total-time">
+        Total: 00:00:00
+    </div>
+    
+    <div class="controls">
+        <label for="timer-order">Timer order:</label>
+        <select id="timer-order">
+            <option>Start in sequence</option>
+        </select>
+    </div>
+    
+    <div class="buttons">
+        <button class="start-sequence-button">Start Sequence</button>
+        <button class="reset-button">Reset All</button>
+    </div>
+
+    <!-- Modal for Adding Timer -->
+    <div id="addTimerModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeModal">&times;</span>
+            <h2>Add Timer</h2>
+            <label for="hours">Hours:</label>
+            <input type="number" id="hours" min="0" value="0"><br>
+            <label for="minutes">Minutes:</label>
+            <input type="number" id="minutes" min="0" value="0"><br>
+            <label for="seconds">Seconds:</label>
+            <input type="number" id="seconds" min="0" value="0"><br>
+            <label for="alarmSound">Choose alarm sound:</label>
+            <input type="file" id="alarmSound" accept="audio/*"><br><br>
+            <button id="saveTimer">Save Timer</button>
+        </div>
+    </div>
+
+    <script>
+        const addTimerButton = document.getElementById('addTimerButton');
+        const modal = document.getElementById('addTimerModal');
+        const closeModal = document.getElementById('closeModal');
+        const saveTimerButton = document.getElementById('saveTimer');
+        const timersContainer = document.getElementById('timersContainer');
+        const startSequenceButton = document.querySelector('.start-sequence-button');
+        const resetAllButton = document.querySelector('.reset-button');
+
+        addTimerButton.onclick = function() {
+            modal.style.display = "block";
+        }
+
+        closeModal.onclick = function() {
+            modal.style.display = "none";
+        }
+
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+
+        saveTimerButton.onclick = function() {
+            const hours = document.getElementById('hours').value;
+            const minutes = document.getElementById('minutes').value;
+            const seconds = document.getElementById('seconds').value;
+            const alarmFile = document.getElementById('alarmSound').files[0];
+
+            if (!alarmFile) {
+                alert("Please select an alarm sound.");
+                return;
+            }
+
+            const timerDuration = {
+                hours: parseInt(hours),
+                minutes: parseInt(minutes),
+                seconds: parseInt(seconds)
+            };
+            const alarmSoundURL = URL.createObjectURL(alarmFile);
+
+            createTimer(timerDuration, alarmSoundURL);
+            modal.style.display = "none";
+        }
+
+        function createTimer(duration, alarmSoundURL) {
+            const timerDiv = document.createElement('div');
+            timerDiv.className = 'timer';
+
+            let timeRemaining = duration.hours * 3600 + duration.minutes * 60 + duration.seconds;
+            let timerInterval;
+            let isRunning = false;
+
+            timerDiv.innerHTML = `
+                <div class="timer-time">${formatTime(timeRemaining)}</div>
+                <div class="timer-details">Timer ( ${formatTime(timeRemaining)} ) <a href="#" class="edit-timer">Edit</a></div>
+                <div class="timer-status">(not started)</div>
+                <div class="timer-controls">
+                    <button class="start-button">Start</button>
+                    <button class="stop-button" style="display: none;">Stop</button>
+                    <button class="reset-button" style="display: none;">Reset</button>
+                    <button class="remove-button">Remove</button>
+                </div>
+            `;
+
+            const startButton = timerDiv.querySelector('.start-button');
+            const stopButton = timerDiv.querySelector('.stop-button');
+            const resetButton = timerDiv.querySelector('.reset-button');
+            const removeButton = timerDiv.querySelector('.remove-button');
+            const timerTimeDisplay = timerDiv.querySelector('.timer-time');
+            const timerStatusDisplay = timerDiv.querySelector('.timer-status');
+
+            startButton.onclick = function() {
+                if (!isRunning) {
+                    isRunning = true;
+                    startTimer();
+                }
+            }
+
+            stopButton.onclick = function() {
+                clearInterval(timerInterval);
+                isRunning = false;
+                timerStatusDisplay.textContent = "(stopped)";
+                startButton.style.display = "inline";
+                stopButton.style.display = "none";
+                resetButton.style.display = "inline";
+            }
+
+            resetButton.onclick = function() {
+                clearInterval(timerInterval);
+                timeRemaining = duration.hours * 3600 + duration.minutes * 60 + duration.seconds;
+                timerTimeDisplay.textContent = formatTime(timeRemaining);
+                timerStatusDisplay.textContent = "(not started)";
+                startButton.style.display = "inline";
+                stopButton.style.display = "none";
+                resetButton.style.display = "none";
+                isRunning = false;
+            }
+
+            removeButton.onclick = function() {
+                clearInterval(timerInterval);
+                timerDiv.remove();
+            }
+
+            function startTimer() {
+                timerStatusDisplay.textContent = "(running)";
+                startButton.style.display = "none";
+                stopButton.style.display = "inline";
+                resetButton.style.display = "none";
+
+                timerInterval = setInterval(function() {
+                    timeRemaining--;
+                    timerTimeDisplay.textContent = formatTime(timeRemaining);
+
+                    if (timeRemaining <= 0) {
+                        clearInterval(timerInterval);
+                        timerStatusDisplay.textContent = "(finished)";
+                        isRunning = false;
+                        startButton.style.display = "none";
+                        stopButton.style.display = "none";
+                        resetButton.style.display = "none";
+                        new Audio(alarmSoundURL).play();
+                    }
+                }, 1000);
+            }
+
+            timersContainer.prepend(timerDiv); // Add new timers at the top
+        }
+
+        startSequenceButton.onclick = function() {
+            const timers = document.querySelectorAll('.timer');
+            let currentTimerIndex = 0;
+
+            function startNextTimer() {
+                if (currentTimerIndex < timers.length) {
+                    const currentTimer = timers[currentTimerIndex];
+                    const startButton = currentTimer.querySelector('.start-button');
+                    startButton.click();
+
+                    currentTimerIndex++;
+                    const timerTimeDisplay = currentTimer.querySelector('.timer-time');
+                    const timerInterval = setInterval(function() {
+                        const timeRemaining = timerTimeDisplay.textContent;
+                        if (timeRemaining === "00:00:00") {
+                            clearInterval(timerInterval);
+                            startNextTimer();
+                        }
+                    }, 1000);
+                }
+            }
+
+            startNextTimer();
+        }
+
+        resetAllButton.onclick = function() {
+            const timers = document.querySelectorAll('.timer');
+            timers.forEach(timer => {
+                const resetButton = timer.querySelector('.reset-button');
+                resetButton.click();
+            });
+        }
+
+        function formatTime(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+    </script>
+</body>
+</html>
